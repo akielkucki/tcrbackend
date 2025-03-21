@@ -46,9 +46,7 @@ public class Main {
             File metadata = new File(uploadDir, "metadata.json");
             try {
                 OutputStream fos = Files.newOutputStream(metadata.toPath());
-                StringBuilder builder = new StringBuilder();
-                builder.append("{ \"workdir\":\"").append(uploadDir.getAbsolutePath()).append("\" }");
-                fos.write(builder.toString().getBytes());
+                fos.write(("{ \"workdir\":\"" + uploadDir.getAbsolutePath() + "\" }").getBytes());
                 fos.close();
             } catch (IOException e) {
                 log.warn("Could not create metadata.json because of {}", e.getMessage());
