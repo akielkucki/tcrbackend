@@ -14,6 +14,9 @@ public class Middleware {
     public static void apply(Javalin app) {
         // Global logging middleware
         app.before(ctx -> {
+            ctx.header("Access-Control-Allow-Origin", "*");
+            ctx.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+            ctx.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
             logger.info("Incoming request: {} {}", ctx.method(), ctx.path());
             ctx.header("X-Processed-By", "JRStudios");
         });

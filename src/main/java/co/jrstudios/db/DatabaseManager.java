@@ -14,7 +14,7 @@ import java.sql.SQLException;
 import java.util.List;
 
 public class DatabaseManager {
-    private static final String DATABASE_URL = "jdbc:sqlite:src/main/resources/database.db";
+    private static final String DATABASE_URL = "jdbc:sqlite:/database.db";
     private static final Logger log = LoggerFactory.getLogger(DatabaseManager.class);
     private ConnectionSource connectionSource;
     private Dao<Project, Integer> projectDao;

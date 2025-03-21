@@ -22,7 +22,8 @@ public class ProjectController {
         return INSTANCE;
     }
     public void renderHomePage(Context ctx) {
-        ctx.contentType("application/json");
+        ctx.header("Access-Control-Allow-Origin", "*");
+
         var model = new java.util.HashMap<String, Object>();
         List<Project> projects = ProjectRepository.getInstance().getProjects();
         model.put("projects", projects);
@@ -208,7 +209,7 @@ public class ProjectController {
         }
     }
     private List<String> saveUploadedImages(List<UploadedFile> uploadedFiles) {
-        String uploadDir = "src/main/resources/uploads/";
+        String uploadDir = "/uploads";
         File uploadDirFile = new File(uploadDir);
         if (!uploadDirFile.exists()) {
             uploadDirFile.mkdirs();

@@ -17,6 +17,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.nio.file.Files;
 import java.nio.file.Path;
 
 public class Main {
@@ -36,9 +40,19 @@ public class Main {
                 ContentType.Html
         );
         FileRenderer jteRenderer = new JavalinJte(engine);
-        File uploadDir = new File("src/main/resources/uploads");
+        File uploadDir = new File("/uploads");
         if (!uploadDir.exists()) {
             uploadDir.mkdirs();
+            File metadata = new File(uploadDir, "metadata.json");
+            try {
+                OutputStream fos = Files.newOutputStream(metadata.toPath());
+                StringBuilder builder = new StringBuilder();
+                builder.append("{ \"workdir\":\"").append(uploadDir.getAbsolutePath()).append("\" }");
+                fos.write(builder.toString().getBytes());
+                fos.close();
+            } catch (IOException e) {
+                log.warn("Could not create metadata.json because of {}", e.getMessage());
+            }
         }
 
         app = Javalin.create(config -> {
@@ -53,7 +67,8 @@ public class Main {
                 staticFileConfig.headers.put("Expires", "0");
             });
 
-        }).start(AppConfig.SERVER_PORT);
+
+        }).start("0.0.0.0",AppConfig.SERVER_PORT);
 
         try {
             DatabaseManager.getInstance().setupDatabase();

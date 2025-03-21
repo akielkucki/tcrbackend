@@ -60,6 +60,7 @@ public class FileController {
 
     // Handle the file route to serve cached images
     public void handleFileRoute(Context ctx) {
+        ctx.header("Access-Control-Allow-Origin", "*");
         String fileName = ctx.pathParam("fileName");
         byte[] imageData = getImage(fileName);
         if (imageData == null) {

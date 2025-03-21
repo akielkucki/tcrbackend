@@ -12,6 +12,7 @@ public class AuthController {
 
     public static void renderLoginPage(Context ctx) {
         // Render the login page; you can pass a model if needed
+        ctx.header("Access-Control-Allow-Origin", "*");
         ctx.render("login.jte", new java.util.HashMap<>());
     }
 
