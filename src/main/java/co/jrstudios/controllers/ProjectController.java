@@ -209,10 +209,15 @@ public class ProjectController {
         }
     }
     private List<String> saveUploadedImages(List<UploadedFile> uploadedFiles) {
-        String uploadDir = "/uploads";
+        // Use a relative path to match FileController's path
+        String uploadDir = "uploads/";
         File uploadDirFile = new File(uploadDir);
         if (!uploadDirFile.exists()) {
-            uploadDirFile.mkdirs();
+            if (uploadDirFile.mkdirs()) {
+                logger.info("Created uploads directory at: {}", uploadDirFile.getAbsolutePath());
+            } else {
+                logger.warn("Failed to create uploads directory: {}", uploadDirFile.getAbsolutePath());
+            }
         }
 
         List<String> imagePaths = new ArrayList<>();
@@ -221,14 +226,13 @@ public class ProjectController {
             File outputFile = new File(outputFilePath);
             try (FileOutputStream fos = new FileOutputStream(outputFile)) {
                 file.content().transferTo(fos);
-                FileController.getInstance().updateCache(outputFile.getName(), outputFile);
-
+                // Update the cache in FileController
+                FileController.getInstance().updateCache(file.filename(), outputFile);
+                logger.info("Image saved to: {}", outputFile.getAbsolutePath());
             } catch (IOException e) {
-                logger.error("Error saving file: " + file.filename(), e);
+                logger.error("Error saving file: {}", file.filename(), e);
             }
             imagePaths.add(outputFile.getAbsolutePath());
-
-            logger.info("Image saved to: " + outputFilePath);
         }
         return imagePaths;
     }

@@ -12,16 +12,14 @@ import io.javalin.rendering.FileRenderer;
 import io.javalin.rendering.template.JavalinJte;
 import gg.jte.ContentType;
 import gg.jte.TemplateEngine;
-import gg.jte.resolve.DirectoryCodeResolver;
+import gg.jte.resolve.ResourceCodeResolver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.file.Files;
-import java.nio.file.Path;
 
 public class Main {
     private static final Logger log = LoggerFactory.getLogger(Main.class);
@@ -35,12 +33,15 @@ public class Main {
     }
 
     private static void initializeApplication() {
+        // Use ResourceCodeResolver instead of DirectoryCodeResolver
         TemplateEngine engine = TemplateEngine.create(
-                new DirectoryCodeResolver(Path.of("src/main/resources/jte")),
+                new ResourceCodeResolver("jte"),
                 ContentType.Html
         );
         FileRenderer jteRenderer = new JavalinJte(engine);
-        File uploadDir = new File("/uploads");
+
+        // Create uploads directory if it doesn't exist
+        File uploadDir = new File("uploads");
         if (!uploadDir.exists()) {
             uploadDir.mkdirs();
             File metadata = new File(uploadDir, "metadata.json");
@@ -56,8 +57,8 @@ public class Main {
         app = Javalin.create(config -> {
             config.fileRenderer(jteRenderer);
             config.staticFiles.add(staticFileConfig -> {
-                staticFileConfig.directory = "/uploads";  // Use a relative path unless you intend an absolute one
-                staticFileConfig.hostedPath = "/uploads";   // URL prefix
+                staticFileConfig.directory = "/uploads";  // Directory in classpath
+                staticFileConfig.hostedPath = "/uploads"; // URL prefix
                 staticFileConfig.location = Location.CLASSPATH;
                 // Disable caching by setting appropriate headers
                 staticFileConfig.headers.put("Cache-Control", "no-cache, no-store, must-revalidate");
@@ -65,8 +66,18 @@ public class Main {
                 staticFileConfig.headers.put("Expires", "0");
             });
 
+            // Add a second static files configuration for the external uploads directory
+            config.staticFiles.add(staticFileConfig -> {
+                staticFileConfig.directory = "uploads"; // External directory
+                staticFileConfig.hostedPath = "/external-uploads"; // Different URL prefix
+                staticFileConfig.location = Location.EXTERNAL;
+                // Disable caching
+                staticFileConfig.headers.put("Cache-Control", "no-cache, no-store, must-revalidate");
+                staticFileConfig.headers.put("Pragma", "no-cache");
+                staticFileConfig.headers.put("Expires", "0");
+            });
 
-        }).start("0.0.0.0",AppConfig.SERVER_PORT);
+        }).start("0.0.0.0", AppConfig.SERVER_PORT);
 
         try {
             DatabaseManager.getInstance().setupDatabase();
