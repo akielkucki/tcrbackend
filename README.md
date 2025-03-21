@@ -27,5 +27,18 @@ A lightweight Java backend built with [Javalin](https://javalin.io/) to manage p
 
 ---
 
-## 📁 Project Structure
+### ✅ Prerequisites
+
+- Java 17+
+- Maven 3.8+
+- (Optional) Fly.io, Docker, or a Linux VPS for deployment
+
+### 🔧 Build & Run
+
+```bash
+# Build the JAR
+mvn clean package
+
+# Run the JAR
+java -jar target/TCRBackend-1.0.jar
 
