@@ -32,6 +32,7 @@ public class JwtUtil {
             return null; // Token is invalid
         }
     }
+
     public static boolean validateAuthorizationRequest(String token) {
         try {
             Algorithm algorithm = Algorithm.HMAC256(SECRET);
@@ -42,6 +43,7 @@ public class JwtUtil {
             return false;
         }
     }
+
     public static String getUsernameFromToken(String token) {
         return JWT.decode(token).getSubject();
     }

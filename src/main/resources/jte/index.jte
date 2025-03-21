@@ -457,6 +457,105 @@
             border-left: 4px solid #dc3545;
         }
 
+        /* Image upload styling */
+        .image-upload-container {
+            margin-bottom: 15px;
+        }
+
+        .image-upload-area {
+            border: 2px dashed var(--border);
+            border-radius: 8px;
+            padding: 30px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .image-upload-area:hover {
+            border-color: var(--accent);
+        }
+
+        .image-upload-area.highlight {
+            border-color: var(--accent);
+            background-color: rgba(0, 0, 0, 0.02);
+        }
+
+        .image-upload-area i {
+            font-size: 24px;
+            color: var(--secondary-text);
+            margin-bottom: 10px;
+        }
+
+        .image-upload-area p {
+            color: var(--secondary-text);
+            font-size: 14px;
+            margin: 0;
+        }
+
+        .image-preview-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .image-preview {
+            position: relative;
+            width: 100px;
+            height: 100px;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+
+        .image-preview img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .image-remove {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background-color: rgba(0, 0, 0, 0.6);
+            color: white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .upload-progress {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            height: 4px;
+            background-color: var(--accent);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        .image-label {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 2px 5px;
+            font-size: 10px;
+            text-overflow: ellipsis;
+            overflow: hidden;
+            white-space: nowrap;
+        }
+
+        .existing-image {
+            border: 1px solid var(--accent);
+        }
         @media (max-width: 1024px) {
             .sidebar {
                 width: 80px;
@@ -611,16 +710,10 @@
             <h3 class="modal-title">Edit Project</h3>
             <button class="close-modal" id="closeModal">&times;</button>
         </div>
-        <div id="editProjectForm">
+        <form id="editProjectForm" enctype="multipart/form-data">
             <input type="hidden" id="projectId" name="id">
             <div class="modal-body">
-                <div class="auth-section">
-                    <div class="form-group">
-                        <label for="authToken" class="form-label">Authorization Token</label>
-                        <input type="text" id="authToken" class="form-control" placeholder="Enter your JWT token">
-                        <p class="auth-message"><span id="tokenStatus" class="token-status"></span> <span id="tokenMessage">Please enter your authorization token</span></p>
-                    </div>
-                </div>
+
                 <div class="form-group">
                     <label for="projectTitle" class="form-label">Project Title</label>
                     <input type="text" id="projectTitle" name="title" class="form-control" required>
@@ -637,6 +730,17 @@
                     <input type="hidden" id="tagsHidden" name="tags">
                 </div>
                 <div class="form-group">
+                    <label class="form-label">Project Images</label>
+                    <div class="image-upload-container">
+                        <div class="image-upload-area" id="imageDropArea">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                            <p>Drag & drop images here or click to browse</p>
+                            <input type="file" id="imageUpload" name="image" multiple accept="image/*" class="file-input" hidden>
+                        </div>
+                        <div class="image-preview-container" id="imagePreviewContainer"></div>
+                    </div>
+                </div>
+                <div class="form-group">
                     <label for="projectLocation" class="form-label">Location</label>
                     <select id="projectLocation" name="location" class="form-control">
                         <option value="On site">On site</option>
@@ -649,7 +753,7 @@
                 <button type="button" class="btn btn-secondary" id="cancelEdit">Cancel</button>
                 <button type="button" class="btn" id="saveChangesBtn">Save Changes</button>
             </div>
-        </div>
+        </form>
     </div>
 </div>
 
@@ -671,7 +775,15 @@
                 "${Arrays.stream(projects.get(i).getTags()).toList().get(j)}"${j < Arrays.stream(projects.get(i).getTags()).toList().size() - 1 ? "," : ""}
                 @endfor
             ],
-            location: "${projects.get(i).getLocation()}"
+            location: "${projects.get(i).getLocation()}",
+            // Add imagePaths if available
+            imagePaths: [
+                @if(projects.get(i).getImagePaths() != null)
+                @for(int k = 0; k < projects.get(i).getImagePaths().length; k++)
+                "${projects.get(i).getImagePaths()[k]}"${k < projects.get(i).getImagePaths().length - 1 ? "," : ""}
+                @endfor
+                @endif
+            ]
             @raw}@endraw${i < projects.size() - 1 ? "," : ""}
         @endfor
         @raw
@@ -689,95 +801,224 @@
     const tagsContainer = document.getElementById('tagsContainer');
     const tagsInput = document.getElementById('tagsInput');
     const tagsHiddenInput = document.getElementById('tagsHidden');
+    const imageDropArea = document.getElementById('imageDropArea');
+    const imageUpload = document.getElementById('imageUpload');
+    const imagePreviewContainer = document.getElementById('imagePreviewContainer');
     const editButtons = document.querySelectorAll('.edit-btn');
     const deleteButtons = document.querySelectorAll('.delete-btn');
     const newProjectBtn = document.getElementById('newProjectBtn');
     const saveChangesBtn = document.getElementById('saveChangesBtn');
-    const authTokenInput = document.getElementById('authToken');
-    const tokenStatus = document.getElementById('tokenStatus');
-    const tokenMessage = document.getElementById('tokenMessage');
     const notification = document.getElementById('notification');
+
+    // Keep track of selected files
+    let selectedFiles = [];
+    // Current tags array
+    let currentTags = [];
+    // Track existing images
+    let existingImages = [];
 
     // Check if token is in localStorage and populate field
     document.addEventListener('DOMContentLoaded', function() {
-        const savedToken = localStorage.getItem('authToken');
-        if (savedToken) {
-            authTokenInput.value = savedToken;
-            validateToken(savedToken);
-        }
+        // Initialize image upload
+        initImageUpload();
+
+        // Tags input handling
+        tagsInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' || e.key === ',') {
+                e.preventDefault();
+                addTag(this.value);
+            }
+        });
+
+        tagsInput.addEventListener('blur', function() {
+            if (this.value.trim()) {
+                addTag(this.value);
+            }
+        });
+
+        // Event delegation for tag removal
+        tagsContainer.addEventListener('click', function(e) {
+            if (e.target.classList.contains('tag-remove')) {
+                const tagToRemove = e.target.getAttribute('data-tag');
+                removeTag(tagToRemove);
+            }
+        });
     });
 
-    // Validate token when input changes
-    authTokenInput.addEventListener('input', function() {
-        const token = this.value.trim();
-        validateToken(token);
-    });
+    // Initialize image upload functionality
+    function initImageUpload() {
+        // Trigger file input when clicking on the drop area
+        imageDropArea.addEventListener('click', () => {
+            imageUpload.click();
+        });
 
-    // Function to validate token format (basic check)
-    function validateToken(token) {
-        if (!token) {
-            tokenStatus.className = 'token-status';
-            tokenMessage.textContent = 'Please enter your authorization token';
-            return false;
+        // Handle file selection
+        imageUpload.addEventListener('change', handleFiles);
+
+        // Handle drag and drop events
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            imageDropArea.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
         }
 
-        // Check if token has three parts separated by dots (basic JWT format)
-        const parts = token.split('.');
-        if (parts.length !== 3) {
-            tokenStatus.className = 'token-status invalid';
-            tokenMessage.textContent = 'Invalid token format';
-            return false;
+        // Add highlighting while dragging
+        ['dragenter', 'dragover'].forEach(eventName => {
+            imageDropArea.addEventListener(eventName, highlight, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            imageDropArea.addEventListener(eventName, unhighlight, false);
+        });
+
+        function highlight() {
+            imageDropArea.classList.add('highlight');
         }
 
-        // Store valid token in localStorage
-        localStorage.setItem('authToken', token);
-        tokenStatus.className = 'token-status valid';
-        tokenMessage.textContent = 'Token looks valid';
-        return true;
-    }
-
-    // Current tags array
-    let currentTags = [];
-
-    // Open modal function
-    function openModal(projectId) {
-        const project = projectsData.find(p => p.id == projectId);
-
-        if (project) {
-            // Populate form fields
-            projectIdInput.value = project.id;
-            projectTitleInput.value = project.title;
-            projectDescriptionInput.value = project.description;
-            projectLocationInput.value = project.location;
-
-            // Reset and populate tags
-            currentTags = [...project.tags];
-            renderTags();
-
-            // Show modal
-            editModal.classList.add('active');
+        function unhighlight() {
+            imageDropArea.classList.remove('highlight');
         }
+
+        // Handle dropped files
+        imageDropArea.addEventListener('drop', (e) => {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            handleFiles({ target: { files } });
+        });
     }
 
-    // Open modal for new project
-    function openNewProjectModal() {
-        // Clear form fields
-        projectIdInput.value = '';
-        projectTitleInput.value = '';
-        projectDescriptionInput.value = '';
-        projectLocationInput.value = 'On site';
+    // Handle the selected files
+    function handleFiles(e) {
+        const files = Array.from(e.target.files);
+        files.forEach(file => {
+            // Check if it's an image
+            if (!file.type.match('image.*')) {
+                showNotification('Only image files are allowed', 'error');
+                return;
+            }
 
-        // Reset tags
-        currentTags = [];
-        renderTags();
+            // Check file size (limit to 5MB)
+            if (file.size > 5 * 1024 * 1024) {
+                showNotification('Image size should be less than 5MB', 'error');
+                return;
+            }
 
-        // Show modal
-        editModal.classList.add('active');
+            // Add to selected files array
+            selectedFiles.push(file);
+
+            // Create a preview
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                addImagePreview(e.target.result, selectedFiles.length - 1);
+            };
+            reader.readAsDataURL(file);
+        });
     }
 
-    // Close modal function
-    function closeModal() {
-        editModal.classList.remove('active');
+    // Add image preview for new uploads
+    function addImagePreview(src, index) {
+        const previewElement = document.createElement('div');
+        previewElement.className = 'image-preview';
+        previewElement.innerHTML = `
+            <img src="${src}" alt="Preview">
+            <div class="image-remove" data-index="${index}">&times;</div>
+            <div class="upload-progress"></div>
+        `;
+
+        // Add remove functionality
+        const removeBtn = previewElement.querySelector('.image-remove');
+        removeBtn.addEventListener('click', () => {
+            // Remove from selectedFiles array
+            selectedFiles.splice(index, 1);
+
+            // Remove preview element
+            previewElement.remove();
+
+            // Re-index the remaining preview elements
+            const removeBtns = document.querySelectorAll('.image-remove');
+            removeBtns.forEach((btn, i) => {
+                btn.setAttribute('data-index', i);
+            });
+        });
+
+        imagePreviewContainer.appendChild(previewElement);
+    }
+
+    // Add preview for existing images
+    function addExistingImagePreview(path, fileName, index) {
+        // Create a preview element with placeholder or actual image
+        const previewElement = document.createElement('div');
+        previewElement.className = 'image-preview existing-image';
+
+        // Create image URL - we'll use a placeholder or actual image path depending on how they're served
+        // If images are served from a public directory, you can use the actual path
+        // Otherwise, use a placeholder image
+        const imageUrl = `/uploads/${fileName}`; // Adjust based on your server setup
+        let isImage = false;
+        fetch(imageUrl, { method: 'GET' })
+            .then(response => {
+                // Check the Content-Type header
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.startsWith('image/')) {
+                    isImage = false;
+                    throw new Error('Response is not an image');
+                }
+                // If it is an image, convert it to a Blob (or process as needed)
+                return response.blob();
+            })
+            .then(blob => {
+                // Use the image blob (e.g., create an object URL)
+                const imageObjectUrl = URL.createObjectURL(blob);
+                console.log("Image loaded:", imageObjectUrl);
+                isImage = true;
+                // Do something with the image
+            })
+            .catch(error => {
+                console.error("Error:", error.message);
+                // Handle the case when the response is not an image
+            });
+
+
+
+        const cacheUrl = `/images/${fileName}`; // Adjust based on your server setup
+
+        previewElement.innerHTML = `
+    <img src="${isImage ? imageUrl : cacheUrl}" alt="${fileName}" onerror="this.src='/uploads/404.png'">
+    <div class="image-label" title="${fileName}">
+        ${fileName.length > 10 ? fileName.substring(0, 10) + '...' : fileName}
+    </div>
+    <div class="image-remove existing-remove" data-index="${index}">&times;</div>
+`;
+
+        // Add remove functionality
+        const removeBtn = previewElement.querySelector('.existing-remove');
+        removeBtn.addEventListener('click', () => {
+            // Remove from the existingImages array
+            existingImages.splice(index, 1);
+
+            // Remove preview element
+            previewElement.remove();
+
+            // Re-index the remaining preview elements
+            const removeBtns = document.querySelectorAll('.existing-remove');
+            removeBtns.forEach((btn, i) => {
+                btn.setAttribute('data-index', i);
+            });
+        });
+
+        imagePreviewContainer.appendChild(previewElement);
+    }
+
+    // Clear all images
+    function clearImages() {
+        selectedFiles = [];
+        existingImages = [];
+        imagePreviewContainer.innerHTML = '';
+        // Reset the file input
+        imageUpload.value = '';
     }
 
     // Render tags function
@@ -813,6 +1054,145 @@
         currentTags = currentTags.filter(t => t !== tag);
         renderTags();
     }
+
+    // Open modal function
+    function openModal(projectId) {
+        const project = projectsData.find(p => p.id == projectId);
+
+        if (project) {
+            // Clear the form first
+            editProjectForm.reset();
+
+            // Populate form fields
+            projectIdInput.value = project.id;
+            projectTitleInput.value = project.title;
+            projectDescriptionInput.value = project.description;
+            projectLocationInput.value = project.location;
+
+            // Reset and populate tags
+            currentTags = [...project.tags];
+            renderTags();
+
+            // Clear previous images
+            clearImages();
+
+            // Reset existing images array
+            existingImages = [];
+
+            // Load existing images if available
+            if (project.imagePaths && project.imagePaths.length > 0) {
+                // Add existing images to the preview
+                project.imagePaths.forEach((path, index) => {
+                    if (path && path.trim() !== '') {
+                        // Extract file name from path for display
+                        const fileName = path.split('/').pop();
+
+                        // Add to tracking array
+                        existingImages.push({
+                            path: path,
+                            fileName: fileName
+                        });
+
+                        // Display in the preview area
+                        addExistingImagePreview(path, fileName, index);
+                    }
+                });
+            }
+
+            // Show modal
+            editModal.classList.add('active');
+        }
+    }
+
+    // Open modal for new project
+    function openNewProjectModal() {
+        // Clear the form
+        editProjectForm.reset();
+
+        // Reset hidden id field
+        projectIdInput.value = '';
+
+        // Default location value
+        projectLocationInput.value = 'On site';
+
+        // Reset tags
+        currentTags = [];
+        renderTags();
+
+        // Clear images
+        clearImages();
+
+        // Show modal
+        editModal.classList.add('active');
+    }
+
+    // Close modal function
+    function closeModal() {
+        editModal.classList.remove('active');
+    }
+
+    // Save changes button handler
+    saveChangesBtn.addEventListener('click', function() {
+        // Get token from localStorage
+        const token = localStorage.getItem('authToken');
+        if (!token) {
+            showNotification('Authentication token not found. Please log in again.', 'error');
+            return;
+        }
+
+        // Create FormData object
+        const formData = new FormData();
+
+        // Add basic form fields
+        formData.append('id', projectIdInput.value);
+        formData.append('title', projectTitleInput.value);
+        formData.append('description', projectDescriptionInput.value);
+        formData.append('location', projectLocationInput.value);
+        formData.append('tags', tagsHiddenInput.value);
+
+        // Add existing image paths that weren't removed
+        if (existingImages.length > 0) {
+            formData.append('existingImages', JSON.stringify(existingImages.map(img => img.path)));
+        }
+
+        // Add new image files
+        selectedFiles.forEach(file => {
+            formData.append('image', file);
+        });
+
+        // Determine if this is a new project or update
+        const isNewProject = !projectIdInput.value;
+        const url = isNewProject ? '/api/projects' : '/api/projects';
+        const method = isNewProject ? 'POST' : 'PUT';
+
+        // Send data to server
+        fetch(url, {
+            method: method,
+            headers: {
+                'Authorization': `Bearer ${token}`
+            },
+            body: formData
+        })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                showNotification(`Project ${isNewProject ? 'created' : 'updated'} successfully`, 'success');
+                closeModal();
+
+                // Refresh the page to show updated data
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showNotification(`Error: ${error.message}`, 'error');
+            });
+    });
 
     // Show notification
     function showNotification(message, type) {
@@ -856,85 +1236,11 @@
         }
     });
 
-    // Tags input handling
-    tagsInput.addEventListener('keydown', function(e) {
-        if (e.key === 'Enter' || e.key === ',') {
-            e.preventDefault();
-            addTag(this.value);
-        }
-    });
-
-    tagsInput.addEventListener('blur', function() {
-        if (this.value.trim()) {
-            addTag(this.value);
-        }
-    });
-
-    // Event delegation for tag removal
-    tagsContainer.addEventListener('click', function(e) {
-        if (e.target.classList.contains('tag-remove')) {
-            const tagToRemove = e.target.getAttribute('data-tag');
-            removeTag(tagToRemove);
-        }
-    });
-
-    // Save changes button handler
-    saveChangesBtn.addEventListener('click', function() {
-        const token = authTokenInput.value.trim();
-        if (!validateToken(token)) {
-            showNotification('Please enter a valid authorization token', 'error');
-            return;
-        }
-
-        const formData = {
-            id: projectIdInput.value,
-            title: projectTitleInput.value,
-            description: projectDescriptionInput.value,
-            tags: currentTags,
-            location: projectLocationInput.value
-        };
-
-        // Determine if this is a new project or update
-        const isNewProject = !formData.id;
-        const url = isNewProject ? '/api/projects' : '/api/projects';
-        const method = isNewProject ? 'POST' : 'PUT';
-
-        // Send data to server
-        fetch(url, {
-            method: method,
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify(formData)
-        })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`HTTP error! Status: ${response.status}`);
-                }
-                return response.json();
-            })
-            .then(data => {
-                showNotification(`Project ${isNewProject ? 'created' : 'updated'} successfully`, 'success');
-                closeModal();
-
-                // Refresh the page to show updated data
-                setTimeout(() => {
-                    window.location.reload();
-                }, 1000);
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                showNotification(`Error: ${error.message}`, 'error');
-            });
-    });
-
     // Delete project function
     function deleteProject(projectId) {
         const token = localStorage.getItem('authToken');
         if (!token) {
-            showNotification('Authentication token required', 'error');
-            openModal(projectId); // Open modal to get token
+            showNotification('Authentication token not found. Please log in again.', 'error');
             return;
         }
 

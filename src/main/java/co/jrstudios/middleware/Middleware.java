@@ -1,58 +1,53 @@
 package co.jrstudios.middleware;
 
-import co.jrstudios.Main;
 import co.jrstudios.auth.JwtUtil;
-import com.j256.ormlite.logger.Logger;
-import com.j256.ormlite.logger.LoggerFactory;
 import io.javalin.Javalin;
 import io.javalin.http.Context;
-import io.javalin.http.HttpStatus;
+import io.javalin.http.UnauthorizedResponse;
 import org.eclipse.jetty.http.HttpMethod;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class Middleware {
-    private static final Logger logger = LoggerFactory.getLogger(Main.class);
-    private final Javalin app;
-    public Middleware(Javalin app) {
-        this.app = app;
-    }
-    public void setupLogging() {
+    private static final Logger logger = LoggerFactory.getLogger(Middleware.class);
+
+    public static void apply(Javalin app) {
+        // Global logging middleware
         app.before(ctx -> {
             logger.info("Incoming request: {} {}", ctx.method(), ctx.path());
             ctx.header("X-Processed-By", "JRStudios");
         });
+
+        // Validate panel login for the home page
+        app.before("/", Middleware::validatePanelLogin);
+
+        // Validate API requests (except GET /api/projects)
+        app.before("/api/*", Middleware::validateApiRequest);
     }
-    public void validatePanelLogin(Context ctx) {
+
+    public static void validatePanelLogin(Context ctx) {
         String token = ctx.cookie("token");
         if (token == null || !JwtUtil.validateAuthorizationRequest(token)) {
             ctx.contentType("application/json");
-            ctx.status(401);
             ctx.redirect("/login?error=request_unauthorized");
-        } else {
-            ctx.status(200);
         }
     }
-    /**
-     * Validate API requests with JWT authentication
-     */
-    public void validateApiRequest(Context ctx) {
-        // Skip authentication for GET /api/projects
+
+    public static void validateApiRequest(Context ctx) {
         if (ctx.path().equalsIgnoreCase("/api/projects") &&
                 ctx.req().getMethod().startsWith(HttpMethod.GET.name())) {
-            ctx.status(200);
             return;
         }
 
         String authHeader = ctx.header("Authorization");
         if (authHeader == null) {
             ctx.contentType("application/json");
-            throw new io.javalin.http.UnauthorizedResponse("Missing Authorization header");
+            throw new UnauthorizedResponse("Missing Authorization header");
         }
 
         String token = authHeader.substring("Bearer ".length());
         if (!JwtUtil.validateAuthorizationRequest(token)) {
-            throw new io.javalin.http.UnauthorizedResponse("Unauthorized");
+            throw new UnauthorizedResponse("Unauthorized");
         }
-
-        ctx.status(HttpStatus.OK);
     }
 }
