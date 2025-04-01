@@ -1137,6 +1137,9 @@
         const token = localStorage.getItem('authToken');
         if (!token) {
             showNotification('Authentication token not found. Please log in again.', 'error');
+            setTimeout(() => {
+                window.location.href = '/login';
+            },2000);
             return;
         }
 
